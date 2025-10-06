@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>เกมตอบคำถาม: อาหารต่างประเทศ 🎉</title>
+  <style>
+    :root{
+      --bg:#FFF9FF;
+      --card:#FFFFFF;
+      --accent-pink:#FFD3E0;
+      --accent-yellow:#FFF2CC;
+      --accent-green:#E6FFED;
+      --accent-blue:#E8F5FF;
+      --accent-purple:#F3E8FF;
+      --text:#333;
+      --muted:#666;
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      font-family: 'Segoe UI', Roboto, 'Noto Sans Thai', sans-serif;
+      background: linear-gradient(135deg, var(--accent-pink), var(--accent-blue) 35%, var(--accent-yellow) 70%);
+      min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; color:var(--text);
+    }
+    .container{
+      width:100%; max-width:900px; background:rgba(255,255,255,0.9); border-radius:24px; padding:20px; box-shadow:0 8px 30px rgba(0,0,0,0.08);
+      transform-origin:center; animation:pop 450ms ease;
+    }
+    @keyframes pop{from{transform:scale(.98);opacity:0}to{transform:none;opacity:1}}
+    header{display:flex; align-items:center; gap:14px}
+    .logo{font-size:28px}
+    h1{margin:0;font-size:20px}
+    .meta{color:var(--muted); font-size:13px}
+    .scoreboard{display:flex; gap:12px; align-items:center; margin-top:12px}
+    .chip{background:var(--card); padding:10px 14px; border-radius:14px; box-shadow:0 4px 12px rgba(0,0,0,0.05);}
+
+    .card{margin-top:18px; background:var(--card); border-radius:var(--radius); padding:18px; box-shadow:0 6px 22px rgba(0,0,0,0.06)}
+    .question{font-size:18px; margin-bottom:12px}
+    .emoji-row{font-size:22px}
+    .options{display:grid; grid-template-columns:repeat(2,1fr); gap:12px}
+    .option{
+      padding:12px; border-radius:12px; background:linear-gradient(180deg, rgba(255,255,255,0.85), rgba(250,250,250,0.9));
+      border:2px solid rgba(0,0,0,0.04); cursor:pointer; transition:transform 150ms ease, box-shadow 150ms ease; text-align:left;
+    }
+    .option:hover{transform:translateY(-4px); box-shadow:0 8px 20px rgba(0,0,0,0.06)}
+    .option.disabled{cursor:default; opacity:0.85}
+    .option.correct{background:linear-gradient(90deg,#E6FFED,#D2FFE0); border-color:green}
+    .option.wrong{background:linear-gradient(90deg,#FFEDED,#FFDADA); border-color:#d34a4a}
+    .feedback{margin-top:12px; font-weight:600}
+    .final{display:none; text-align:center}
+    .final.show{display:block}
+    .big-score{font-size:34px; margin-top:8px}
+    .btn{display:inline-flex; gap:8px; align-items:center; padding:10px 14px; border-radius:12px; background:linear-gradient(90deg,var(--accent-purple),var(--accent-pink)); color:#2b0a3a; font-weight:700; cursor:pointer; border:none}
+    .btn.secondary{background:linear-gradient(90deg,var(--accent-green),var(--accent-blue));}
+    footer{margin-top:14px; display:flex; justify-content:space-between; align-items:center}
+
+    .progress-wrap{height:10px; background:rgba(0,0,0,0.05); border-radius:999px; overflow:hidden}
+    .progress{height:100%; width:0%; background:linear-gradient(90deg,#ffd3e0,#bfe9ff); transition:width 450ms cubic-bezier(.2,.9,.2,1)}
+
+    .small{font-size:13px; color:var(--muted)}
+
+    /* simple confetti canvas on top */
+    #confetti{position:fixed; inset:0; pointer-events:none}
+
+    @media (max-width:640px){.options{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <canvas id="confetti"></canvas>
+  <div class="container" role="application" aria-label="Interactive Quiz - อาหารต่างประเทศ">
+    <header>
+      <div class="logo">🍽️</div>
+      <div>
+        <h1>เกมตอบคำถาม: อาหารต่างประเทศ <span class="emoji-row">❤💛💚💙💜</span></h1>
+        <div class="meta">เหมาะสำหรับนักเรียน นักศึกษา — ตอบแล้วรู้ผลทันที มีเสียงและแอนิเมชันน่ารัก</div>
+      </div>
+    </header>
+
+    <div class="scoreboard">
+      <div class="chip">คำถาม: <strong id="qIndex">1</strong>/<span id="totalQ">20</span></div>
+      <div class="chip">คะแนน: <strong id="score">0</strong></div>
+      <div class="chip small">ตอบถูก: <span id="correctCount">0</span> ✔</div>
+    </div>
+
+    <div class="card" id="quizCard">
+      <div class="question" id="question"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback"></div>
+
+      <footer>
+        <div class="progress-wrap" style="flex:1; margin-right:12px">
+          <div class="progress" id="progressBar"></div>
+        </div>
+        <div>
+          <button class="btn secondary" id="skipBtn">ข้ามคำถาม ➡️</button>
+        </div>
+      </footer>
+    </div>
+
+    <div class="card final" id="finalCard">
+      <div style="font-size:18px">จบเกมแล้ว! 👑</div>
+      <div class="big-score" id="finalScore"></div>
+      <div id="finalMessage" style="margin-top:8px;font-weight:600"></div>
+      <div style="margin-top:14px">
+        <button class="btn" id="restartBtn">🔄 เล่นใหม่อีกครั้ง</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Questions (Thai) - 20 ข้อ
+    const questions = [
+      {q:"อาหารญี่ปุ่นชนิดใดเป็นข้าวปั้นห่อสาหร่ายม้วนที่มีไส้ต่าง ๆ?", a:["ซูชิ","ราเม็ง","เทมปุระ","โอนิกิริ"], correct:0},
+      {q:"จานนี้ของอิตาลีทำจากเส้นกว้างและซอสครีมชื่ออะไร?", a:["พาสต้า คาโบนารา","พิซซ่า มาร์เกริต้า","ลาซานญ่า","ทรัสโต้"], correct:0},
+      {q:"ขนมปังชา (Chai) ใดมักพบในอังกฤษพร้อมกับเนยและแยม?", a:["สโคน","ครัวซองต์","แบเก็ต","บรีออช"], correct:0},
+      {q:"อะไรคืออาหารเช้าดังของสหรัฐที่มักมีแพนเค้กและไซรัป?", a:["แพนเค้ก","ก๋วยเตี๋ยว","แรฟเฟิล","โจ๊ก"], correct:0},
+      {q:"สตูว์ถั่วและเนื้อแบบดัตช์-อังกฤษที่ชื่อว่า 'สเตว' นี้ใกล้เคียงกับอะไร?", a:["เฮชบราวน์","เบียร์ไชน์","พายเนื้อและมัน","ชิลลี่"], correct:2},
+      {q:"อาหารเม็กซิกันที่เป็นแผ่นแป้งตอร์ติญ่า ห่อไส้ต่างๆ คือ?", a:["ทาโก้","ซาชิมิ","กิมบับ","ฟาลาเฟล"], correct:0},
+      {q:"ซุปกิมจิ (Kimchi jjigae) มีต้นกำเนิดจากประเทศใด?", a:["เกาหลีใต้","ญี่ปุ่น","จีน","ไทย"], correct:0},
+      {q:"‘ปาเอยา’ (Paella) เป็นอาหารจานเด่นของประเทศใด?", a:["สเปน","อิตาลี","โปรตุเกส","กรีซ"], correct:0},
+      {q:"‘โบบูน’ (Boba/Bubble Tea) มีต้นกำเนิดจากประเทศใด?", a:["ไต้หวัน","จีนแผ่นดินใหญ่","ญี่ปุ่น","เกาหลี"], correct:0},
+      {q:"ของหวานฝรั่งเศสที่เป็นแผ่นแป้งกรอบ ๆ กลม ๆ และมักโรยน้ำตาล แสดงว่าเป็น?", a:["เครป","โดนัท","ชูโรส","มิลเฟย"], correct:0},
+      {q:"อาหารอินเดียชนิดใดเป็นขนมปังแผ่นกลมที่อบในเตา Tandoor?", a:["นาน","โรตี","ปาพาดัม","ปาราทา"], correct:0},
+      {q:"‘ชูวารมา’ (Shawarma) เป็นอาหารย่างจากภูมิภาคใด?", a:["ตะวันออกกลาง","แถบสแกนดิเนเวีย","ละตินอเมริกา","แอฟริกา"], correct:0},
+      {q:"อาหารไทย 'ต้มยำกุ้ง' มีรสชาติโดดเด่นจากอะไร?", a:["รสเปรี้ยวและเผ็ด","หวานจัด","เค็มอย่างเดียว","จืด"], correct:0},
+      {q:"‘โกลาคี’ (Goulash) เป็นสตูว์เนื้อจากประเทศใด?", a:["ฮังการี","โปแลนด์","ออสเตรีย","เยอรมนี"], correct:0},
+      {q:"ในประเทศจีน เมนูที่ใช้แผ่นแป้งห่อไส้ผักหรือเนื้อแล้วทอดหรือทำให้กรอบคือ?", a:["เกี๊ยว/ปอเปี๊ยะ","ซูชิโรล","ทาโก้","พีซซ่า"], correct:0},
+      {q:"‘ซาลาเปา’ ที่เป็นแป้งนุ่มไส้ต่าง ๆ มีรากจากประเทศใด?", a:["จีน","ญี่ปุ่น","เกาหลี","ไทย"], correct:0},
+      {q:"อาหารบราซิลที่นิยมในงานปาร์ตี้และใช้ถั่วดำคืออะไร?", a:["เฟโจอาดา","แอเรียส","โมเคกา","เอแวา"], correct:0},
+      {q:"ประเทศใดมีชื่อเสียงในอาหารทะเลย่าง 'ซีฟู้ดบาร์บีคิว' แบบย่างรวมครอบครัว?", a:["ออสเตรเลีย","แคนาดา","สวิตเซอร์แลนด์","โปแลนด์"], correct:0},
+      {q:"‘เคบับ’ (Kebab) เป็นอาหารยอดนิยมในประเทศใด?", a:["ตุรกี","สเปน","รัสเซีย","ญี่ปุ่น"], correct:0},
+      {q:"อาหารเวียดนามที่เป็นซุปเส้นใส่เนื้อหรือไก่ เรียกว่า?", a:["โฟ (Phơ)","บันหมี่","บันเซอ","นัมทัม"], correct:0},
+      // add a couple more to make it lively
+      {q:"ในสวีเดนมีขนมปังที่เป็นลูกกลมเล็ก ๆ ทานคู่กับกาแฟเรียกว่าอะไร?", a:["คาเนลบูลเลอร์ (Kanelbulle)","ครัวซองต์","ดอนัท","ฟิกคา"], correct:0},
+      {q:"‘ปานินี’ (Panini) เป็นแซนด์วิชย่างแบบจากประเทศใด?", a:["อิตาลี","ฝรั่งเศส","สหรัฐ","เม็กซิโก"], correct:0}
+    ];
+
+    // state
+    let index = 0; let score = 0; let correctCount = 0; const total = questions.length;
+    const qIndexEl = document.getElementById('qIndex');
+    const totalQEl = document.getElementById('totalQ'); totalQEl.textContent = total;
+    const questionEl = document.getElementById('question');
+    const optionsEl = document.getElementById('options');
+    const feedbackEl = document.getElementById('feedback');
+    const scoreEl = document.getElementById('score');
+    const correctCountEl = document.getElementById('correctCount');
+    const progressBar = document.getElementById('progressBar');
+    const finalCard = document.getElementById('finalCard');
+    const quizCard = document.getElementById('quizCard');
+    const finalScore = document.getElementById('finalScore');
+    const finalMessage = document.getElementById('finalMessage');
+    const restartBtn = document.getElementById('restartBtn');
+    const skipBtn = document.getElementById('skipBtn');
+
+    // audio with WebAudio API
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioCtx();
+    function playTone(freq,duration=0.25, type='sine', gain=0.06){
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = type; o.frequency.value = freq; g.gain.value = gain;
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + duration);
+    }
+    function correctSound(){ playTone(880,0.08,'sine',0.06); setTimeout(()=>playTone(1320,0.12,'sine',0.04),90);}    
+    function wrongSound(){ playTone(220,0.18,'sawtooth',0.08); }
+    function endSound(){ playTone(660,0.12,'triangle',0.08); setTimeout(()=>playTone(880,0.14,'triangle',0.06),130); setTimeout(()=>playTone(990,0.18,'triangle',0.04),300); }
+
+    // confetti
+    const confettiCanvas = document.getElementById('confetti');
+    const ctx = confettiCanvas.getContext('2d');
+    let confettiPieces = [];
+    function resizeCanvas(){ confettiCanvas.width = window.innerWidth; confettiCanvas.height = window.innerHeight; }
+    window.addEventListener('resize', resizeCanvas); resizeCanvas();
+    function spawnConfetti(){ confettiPieces = []; const colors = ['#FFD3E0','#FFF2CC','#E6FFED','#E8F5FF','#F3E8FF'];
+      for(let i=0;i<120;i++){ confettiPieces.push({x:Math.random()*confettiCanvas.width, y:Math.random()*-confettiCanvas.height, vx:(Math.random()-0.5)*2, vy: Math.random()*3+2, r:Math.random()*7+3, c: colors[Math.floor(Math.random()*colors.length)], rot: Math.random()*360, vr: (Math.random()-0.5)*6}); }
+      requestAnimationFrame(confettiLoop);
+    }
+    function confettiLoop(){ ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height); for(const p of confettiPieces){ p.x += p.vx; p.y += p.vy; p.vy += 0.03; p.rot += p.vr; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot*Math.PI/180); ctx.fillStyle = p.c; ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*0.6); ctx.restore(); }
+      confettiPieces = confettiPieces.filter(p=>p.y<confettiCanvas.height+50);
+      if(confettiPieces.length>0) requestAnimationFrame(confettiLoop); else ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+    }
+
+    function showQuestion(){
+      const cur = questions[index];
+      qIndexEl.textContent = index+1;
+      questionEl.innerHTML = `${index+1}. ${cur.q} <span class="emoji-row"> 🍜 🍣 🌮</span>`;
+      optionsEl.innerHTML = '';
+      feedbackEl.textContent = '';
+      cur.a.forEach((opt,i)=>{
+        const btn = document.createElement('button'); btn.className='option'; btn.innerHTML = `<strong>${String.fromCharCode(65+i)}</strong>. ${opt}`;
+        btn.addEventListener('click',()=>selectAnswer(i,btn));
+        optionsEl.appendChild(btn);
+      });
+      progressBar.style.width = `${Math.round((index/total)*100)}%`;
+    }
+
+    function selectAnswer(i,btn){
+      // prevent double
+      if(btn.classList.contains('disabled')) return;
+      // disable all
+      document.querySelectorAll('.option').forEach(o=>o.classList.add('disabled'));
+      const cur = questions[index];
+      if(i === cur.correct){
+        btn.classList.add('correct');
+        feedbackEl.textContent = 'เก่งมาก! 🎮 คุณตอบถูกแล้ว!';
+        correctSound(); score += 10; correctCount += 1; scoreEl.textContent = score; correctCountEl.textContent = correctCount; 
+      } else {
+        btn.classList.add('wrong');
+        // highlight correct
+        const opts = document.querySelectorAll('.option'); opts[cur.correct].classList.add('correct');
+        feedbackEl.textContent = `เกือบถูกแล้วนะ 🌸 คำตอบที่ถูกต้องคือ: ${cur.a[cur.correct]}`;
+        wrongSound();
+      }
+      // small delay then next
+      setTimeout(()=>{
+        index++;
+        if(index < total){ showQuestion(); }
+        else { finishQuiz(); }
+      }, 900);
+    }
+
+    function finishQuiz(){
+      // show final
+      quizCard.style.display='none';
+      finalCard.classList.add('show');
+      finalScore.textContent = `${score} / ${total*10} คะแนน`;
+      let msg = '';
+      if(score === total*10) msg = 'สุดยอด! คุณเป็นกูรูเรื่องอาหารระหว่างประเทศเลย 👑';
+      else if(score >= total*10*0.75) msg = 'ดีมาก! อร่อยทั้งความรู้และความตั้งใจ 🍰';
+      else if(score >= total*10*0.4) msg = 'เยี่ยม! เรียนรู้เพิ่มเติมและลองเล่นอีกครั้งนะ ✨';
+      else msg = 'อย่ายอมแพ้! ลองใหม่อีกครั้ง คุณทำได้แน่ 💪';
+      finalMessage.textContent = msg + ' ' + '👑'.repeat(Math.min(3, Math.floor(score/ (total*10/3) )));
+      progressBar.style.width = '100%';
+      endSound(); spawnConfetti();
+    }
+
+    restartBtn.addEventListener('click', ()=>{
+      index = 0; score = 0; correctCount = 0; scoreEl.textContent = score; correctCountEl.textContent = correctCount; finalCard.classList.remove('show'); quizCard.style.display='block'; progressBar.style.width='0%'; showQuestion();
+    });
+
+    skipBtn.addEventListener('click', ()=>{
+      // treat as wrong but show answer
+      document.querySelectorAll('.option').forEach(o=>o.classList.add('disabled'));
+      const cur = questions[index]; document.querySelectorAll('.option')[cur.correct].classList.add('correct');
+      feedbackEl.textContent = `เฉลย: ${cur.a[cur.correct]} ✨`;
+      wrongSound();
+      setTimeout(()=>{ index++; if(index < total) showQuestion(); else finishQuiz(); }, 900);
+    });
+
+    // initialize
+    showQuestion();
+
+    // small accessibility: keyboard navigation
+    document.addEventListener('keydown', (e)=>{
+      if(e.key >= '1' && e.key <= '4'){
+        const k = parseInt(e.key)-1; const opts = document.querySelectorAll('.option'); if(opts[k]) opts[k].click();
+      }
+    });
+
+  </script>
+</body>
+</html>
